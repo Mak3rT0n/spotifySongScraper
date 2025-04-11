@@ -13,13 +13,9 @@ def generate_random_number(begin, stop):
     return number
 
 
-TargetUrl = 'https://open.spotify.com/playlist/4TI52y8ILsaz1ae9DjS9ns'
+TargetUrl = 'spotify url'
 driver = webdriver.Firefox()
 
-playlist_name_xpath = ""
-playlist_song_amount_xpath = ""
-artists_xpath = ""
-song_length_xpath = ""
 iteration = 0
 try:
     driver.get(TargetUrl)
