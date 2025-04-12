@@ -65,13 +65,26 @@ try:
         
         json_file.write(json.dumps(playlist_data) + "\n"*2)    
         
+
         song_rows = WebDriverWait(driver, 10).until(
             EC.presence_of_all_elements_located((By.XPATH, '//div[@role="row"]'))
             )
-        driver.implicitly_wait(5)
+        driver.execute_script("arguments[0].scrollIntoView()", 
+                              driver.find_element(By.XPATH, '//div[@aria-rowindex="2"]'))
+        
+        iteration += 2
+
         for row in song_rows:
             try:
-                
+                iteration += 1
+
+                driver.execute_script("arguments[0].scrollIntoView()", 
+                              driver.find_element(By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
+
+                WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
+                )
+
                 song_name = row.find_element(By.XPATH, './/a/div').text
                 artist_name = row.find_element(By.XPATH, './/a/following-sibling::span/div/a').text
                 song_length = row.find_element(By.XPATH, './div/div[5]/div').text
@@ -83,11 +96,12 @@ try:
                     }
 
                 # Scroll until enough songs are loaded
-                '''while len(driver.find_elements(By.XPATH, '//div[@role="row"]')) < cleaned_playlist_song_amount:
-                    driver.execute_script("window.scrollBy(0, 800);")
-                    time.sleep(SCROLL_PAUSE_TIME)'''
+                
             
                 json_file.write(json.dumps(song_data) + "\n")
+
+                if iteration >= 100:
+                    driver.quit()
 
             except Exception as message:
                 print(f"[!] Skipped a row due to error: {message}")
