@@ -6,11 +6,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import json
 import random
+import time
 
 def generate_random_number(begin, stop):
     number = random.randrange(begin, stop)
 
     return number
+
 
 #Any Spotify playlist or radio as long as it's public
 #will be scraped if added here
@@ -20,6 +22,9 @@ TargetUrl = 'https://open.spotify.com/playlist/4TI52y8ILsaz1ae9DjS9ns'
 driver = webdriver.Firefox()
 
 iteration = 0
+
+SCROLL_PAUSE_TIME = 1.5
+
 
 #Try block holds all code for scraping the data and adding it to a json file
 try:
@@ -39,7 +44,7 @@ try:
             cleaned_playlist_name += i
 
     playlist_song_amount_xpath = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, 
-        '//div[@class="RP2rRchy4i8TIp1CTmb7"]/div/div[2]/span'))
+        '//div[@class="RP2rRchy4i8TIp1CTmb7"]/div/div[2]/span[1]'))
     )
     playlist_song_amount = playlist_song_amount_xpath.text
 
@@ -48,48 +53,46 @@ try:
     cleaned_num = num_string.replace(",", "")
     cleaned_playlist_song_amount = int(cleaned_num)
     
+    total_songs_expected = cleaned_playlist_song_amount
+
     playlist_data = {
             "Playlist Name" : uncleaned_playlist_name,
             "Playlist Song Amount" : playlist_song_amount,
             }
     
+    #creates the json file, all song scraping code is here
     with open(f'{cleaned_playlist_name}.json', 'w') as json_file:
         
         json_file.write(json.dumps(playlist_data) + "\n"*2)    
         
-
-        for i in range(1, int(cleaned_playlist_song_amount) + 1):
-            iteration += 1
-            
-            songs_xpath = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, 
-            f'//div[@class="lyVkg68L7ycnwyOcO3vj"]/following-sibling::div/div[{iteration}]/div[1]/div[2]/div[1]/a/div[1]'))
+        song_rows = WebDriverWait(driver, 10).until(
+            EC.presence_of_all_elements_located((By.XPATH, '//div[@role="row"]'))
             )
-            song_name = songs_xpath.text
-
-            artists_xpath = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, 
-            f'//div[@class="lyVkg68L7ycnwyOcO3vj"]/following-sibling::div/div[{iteration}]/div[1]/div[2]/div[1]/span/div[1]/a'))
-            )
-            artist_name = artists_xpath.text
-
-            song_length_xpath = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, 
-            f'//div[@class="lyVkg68L7ycnwyOcO3vj"]/following-sibling::div/div[{iteration}]/div[1]/div[5]/div'))
-            )
-            song_length = song_length_xpath.text
+        driver.implicitly_wait(5)
+        for row in song_rows:
+            try:
+                
+                song_name = row.find_element(By.XPATH, './/a/div').text
+                artist_name = row.find_element(By.XPATH, './/a/following-sibling::span/div/a').text
+                song_length = row.find_element(By.XPATH, './div/div[5]/div').text
             
-            if (iteration % 5) == 0:
-                driver.execute_script("window.scrollBy(0, 500);")
+                song_data = {
+                    "Song Name": song_name,
+                    "Artist Name": artist_name,
+                    "Song Length": song_length,         
+                    }
 
-            song_data = {
-                "Song Name": song_name,
-                "Artist Name": artist_name,
-                "Song Length": song_length,         
-                }
+                # Scroll until enough songs are loaded
+                '''while len(driver.find_elements(By.XPATH, '//div[@role="row"]')) < cleaned_playlist_song_amount:
+                    driver.execute_script("window.scrollBy(0, 800);")
+                    time.sleep(SCROLL_PAUSE_TIME)'''
             
-            json_file.write(json.dumps(song_data) + "\n")
-    
+                json_file.write(json.dumps(song_data) + "\n")
 
-    print(song_name, uncleaned_playlist_name, playlist_song_amount, artist_name, song_length)
-except Exception as fail_message:
-    print(f"error occured: {fail_message}")
+            except Exception as message:
+                print(f"[!] Skipped a row due to error: {message}")
+
+except Exception as e:
+    print(f"Everything broke: {e}")
 
 driver.quit()
