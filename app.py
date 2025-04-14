@@ -63,45 +63,38 @@ try:
     #creates the json file, all song scraping code is here
     with open(f'{cleaned_playlist_name}.json', 'w') as json_file:
         
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '//div[@role="row"]'))
+            )
+        
         json_file.write(json.dumps(playlist_data) + "\n"*2)    
         
-
-        song_rows = WebDriverWait(driver, 10).until(
-            EC.presence_of_all_elements_located((By.XPATH, '//div[@role="row"]'))
-            )
-        driver.execute_script("arguments[0].scrollIntoView()", 
-                              driver.find_element(By.XPATH, '//div[@aria-rowindex="2"]'))
-        
-        iteration += 2
-
-        for row in song_rows:
+        for i in range(1, total_songs_expected):
             try:
                 iteration += 1
 
+                #scrolls into view the element, then makes sure its loaded
                 driver.execute_script("arguments[0].scrollIntoView()", 
                               driver.find_element(By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
 
-                WebDriverWait(driver, 10).until(
+                current_row = WebDriverWait(driver, 10).until(
                     EC.presence_of_element_located((By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
                 )
-
-                song_name = row.find_element(By.XPATH, './/a/div').text
-                artist_name = row.find_element(By.XPATH, './/a/following-sibling::span/div/a').text
-                song_length = row.find_element(By.XPATH, './div/div[5]/div').text
+                
+                song_number = str(iteration)
+                song_name = current_row.find_element(By.XPATH, './/a/div').text
+                artist_name = current_row.find_element(By.XPATH, './/a/following-sibling::span/div/a').text
+                song_length = current_row.find_element(By.XPATH, './div/div[5]/div').text
             
                 song_data = {
+                    "No." : song_number,
                     "Song Name": song_name,
                     "Artist Name": artist_name,
                     "Song Length": song_length,         
                     }
-
-                # Scroll until enough songs are loaded
-                
             
                 json_file.write(json.dumps(song_data) + "\n")
 
-                if iteration >= 100:
-                    driver.quit()
 
             except Exception as message:
                 print(f"[!] Skipped a row due to error: {message}")
