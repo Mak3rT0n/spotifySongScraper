@@ -1,18 +1,9 @@
-import requests
 import selenium
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 import json
-import random
-import time
-
-def generate_random_number(begin, stop):
-    number = random.randrange(begin, stop)
-
-    return number
-
 
 #Any Spotify playlist or radio as long as it's public
 #will be scraped if added here
@@ -69,10 +60,13 @@ try:
         
         json_file.write(json.dumps(playlist_data) + "\n"*2)    
         
-        for i in range(1, total_songs_expected):
-            try:
-                iteration += 1
+        print("Started Scraping")
 
+        # +1 is needed because the first song of the row starts at row 2
+        for i in range(1, (total_songs_expected + 1)):
+            try:                
+                iteration += 1
+                
                 #scrolls into view the element, then makes sure its loaded
                 driver.execute_script("arguments[0].scrollIntoView()", 
                               driver.find_element(By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
@@ -81,7 +75,7 @@ try:
                     EC.presence_of_element_located((By.XPATH, f'//div[@aria-rowindex="{iteration}"]'))
                 )
                 
-                song_number = str(iteration)
+                song_number = str(iteration - 1)
                 song_name = current_row.find_element(By.XPATH, './/a/div').text
                 artist_name = current_row.find_element(By.XPATH, './/a/following-sibling::span/div/a').text
                 song_length = current_row.find_element(By.XPATH, './div/div[5]/div').text
